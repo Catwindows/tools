@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CatWindows</title>
+    <!-- Font Orbitron for high-tech style -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-blue: #46a5d3;
+            --neon-blue: #00e5ff;
+            --neon-pink: #ff00ff;
+            --neon-yellow: #ffff00;
+            --neon-green: #00ff41;
+            --dark-bg: #030303;
+            --font-tech: 'Orbitron', sans-serif;
+            --terminal-bg: rgba(5, 5, 5, 0.98);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--dark-bg);
+            color: white;
+            font-family: var(--font-tech);
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(0, 229, 255, 0.1) 0%, transparent 80%),
+                linear-gradient(rgba(0, 229, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 229, 255, 0.05) 1px, transparent 1px);
+            background-size: 100% 100%, 40px 40px, 40px 40px;
+        }
+
+        body::after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 2;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+
+        #intro-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+        }
+
+        .intro-text {
+            font-size: 5rem;
+            font-weight: 900;
+            color: var(--primary-blue);
+            text-shadow: 0 0 30px var(--neon-blue);
+            animation: glitchText 3s infinite;
+        }
+
+        .loading-container {
+            width: 400px;
+            height: 2px;
+            background: #222;
+            margin-top: 40px;
+            position: relative;
+        }
+
+        .loading-bar {
+            height: 100%;
+            width: 0%;
+            background: var(--neon-blue);
+            box-shadow: 0 0 15px var(--neon-blue);
+        }
+
+        #main-interface {
+            display: none; 
+            width: 100%;
+            height: 100%;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 3;
+        }
+
+        .main-title {
+            font-size: 3.5rem;
+            color: var(--neon-blue);
+            margin-bottom: 50px;
+            text-transform: uppercase;
+            letter-spacing: 10px;
+            text-shadow: 0 0 20px var(--primary-blue);
+            position: relative;
+        }
+
+        .button-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            perspective: 1000px;
+            max-width: 800px;
+            width: 90%;
+        }
+
+        .tech-btn {
+            background: transparent;
+            border: 1px solid var(--neon-blue);
+            color: var(--neon-blue);
+            padding: 20px;
+            font-size: 0.85rem;
+            font-family: var(--font-tech);
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%);
+            text-decoration: none;
+            text-align: center;
+        }
+
+        .tech-btn:hover {
+            background: var(--neon-blue);
+            color: black;
+            box-shadow: 0 0 30px var(--neon-blue);
+            transform: scale(1.05);
+        }
+
+        .tech-btn.special { border-color: var(--neon-pink); color: var(--neon-pink); }
+        .tech-btn.special:hover { background: var(--neon-pink); color: black; box-shadow: 0 0 30px var(--neon-pink); }
+        
+        .tech-btn.warning { border-color: var(--neon-yellow); color: var(--neon-yellow); }
+        .tech-btn.warning:hover { background: var(--neon-yellow); color: black; box-shadow: 0 0 30px var(--neon-yellow); }
+
+        .tech-btn.green { border-color: var(--neon-green); color: var(--neon-green); }
+        .tech-btn.green:hover { background: var(--neon-green); color: black; box-shadow: 0 0 30px var(--neon-green); }
+
+        .tech-btn span { font-size: 1.8rem; margin-bottom: 8px; }
+
+        /* --- TERMINAL --- */
+        #terminal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.92);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(8px);
+        }
+
+        #terminal-window {
+            width: 95%;
+            max-width: 1000px;
+            height: 85vh;
+            background: var(--terminal-bg);
+            border: 1px solid var(--primary-blue);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 0 40px rgba(0, 229, 255, 0.1);
+        }
+
+        .terminal-header {
+            background: var(--primary-blue);
+            padding: 8px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: black;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+
+        .terminal-body {
+            flex: 1;
+            padding: 25px;
+            overflow-y: auto;
+            color: #00ff41;
+            font-family: 'Courier New', monospace;
+        }
+
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .test-item {
+            border: 1px solid rgba(0, 255, 65, 0.3);
+            padding: 15px;
+            background: rgba(0, 255, 65, 0.05);
+            transition: 0.3s;
+        }
+
+        .test-item:hover { border-color: var(--neon-blue); background: rgba(0, 229, 255, 0.05); }
+
+        .test-title { color: var(--neon-blue); font-weight: bold; margin-bottom: 10px; display: block; border-bottom: 1px solid; }
+        
+        .cmd-line {
+            background: #111;
+            padding: 8px;
+            margin: 8px 0;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border-left: 3px solid var(--neon-pink);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .cmd-line:hover { background: #222; }
+        .cmd-line::after { content: "COPY"; font-size: 0.6rem; color: var(--neon-pink); }
+
+        .software-list { font-size: 0.85rem; color: #ccc; list-style: none; padding: 0; }
+        .software-list li { margin-bottom: 5px; }
+        .software-list li::before { content: "→ "; color: var(--neon-pink); }
+
+        .close-footer {
+            padding: 15px;
+            text-align: center;
+            border-top: 1px solid #222;
+        }
+
+        #toast {
+            visibility: hidden;
+            background: var(--neon-pink);
+            color: white;
+            padding: 12px 25px;
+            position: fixed;
+            bottom: 30px;
+            z-index: 2000;
+            font-size: 0.9rem;
+        }
+        #toast.show { visibility: visible; animation: slideUp 0.3s; }
+
+        @keyframes glitchText {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); text-shadow: 2px 0 red, -2px 0 blue; }
+            40% { transform: translate(-2px, -2px); text-shadow: -2px 0 red, 2px 0 blue; }
+            100% { transform: translate(0); }
+        }
+        @keyframes slideUp { from { bottom: 0; opacity: 0; } to { bottom: 30px; opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <div id="intro-screen">
+        <div class="intro-text">CATWINDOWS</div>
+        <div class="loading-container"><div class="loading-bar" id="intro-bar"></div></div>
+    </div>
+
+    <div id="main-interface">
+        <div class="main-title">CATWINDOWS TOOLS</div>
+        
+        <div class="button-container">
+            <!-- Hàng 1 -->
+            <button class="tech-btn" onclick="handleActiveWindows()">
+                <span>⚡</span> ACTIVE WINDOWS
+            </button>
+            
+            <button class="tech-btn" onclick="handleCheckHardware()">
+                <span>🖥️</span> CẤU HÌNH MÁY
+            </button>
+
+            <!-- Hàng 2 -->
+            <button class="tech-btn warning" onclick="openDeepTest()">
+                <span>🔥</span> TEST MÁY  CHUYÊN SÂU
+            </button>
+
+            <a href="https://trinhanlaptop.vn/tools/" target="_blank" class="tech-btn special">
+                <span>🧪</span> TEST ONLINE
+            </a>
+
+            <!-- Hàng 3 -->
+            <button class="tech-btn green" onclick="openAppDownloader()">
+                <span>📦</span> TẢI APP & DRIVER
+            </button>
+
+            <button class="tech-btn" onclick="showInfo()">
+                <span>💎</span> THÔNG TIN NGƯỜI TẠO RA
+            </button>
+        </div>
+    </div>
+
+    <div id="terminal-overlay">
+        <div id="terminal-window">
+            <div class="terminal-header">
+                <span id="term-title">SYSTEM_DIAGNOSTIC_v2.5</span>
+                <span style="cursor:pointer" onclick="closeTerminal()">[X] CLOSE</span>
+            </div>
+            <div class="terminal-body" id="term-body">
+                <!-- Content Injected Here -->
+            </div>
+            <div class="close-footer">
+                <button class="tech-btn" style="padding: 10px 40px; min-width: auto; display: inline-block;" onclick="closeTerminal()">QUAY LẠI MENU</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast">ĐÃ SAO CHÉP LỆNH!</div>
+
+    <script>
+        window.onload = function() {
+            const bar = document.getElementById('intro-bar');
+            let width = 0;
+            const interval = setInterval(() => {
+                if (width >= 100) {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        document.getElementById('intro-screen').style.display = 'none';
+                        document.getElementById('main-interface').style.display = 'flex';
+                    }, 500);
+                } else {
+                    width += Math.random() * 10;
+                    if(width > 100) width = 100;
+                    bar.style.width = width + '%';
+                }
+            }, 50);
+        };
+
+        function copy(text) {
+            const el = document.createElement('textarea');
+            el.value = text;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+            const t = document.getElementById('toast');
+            t.className = "show";
+            setTimeout(() => { t.className = ""; }, 2500);
+        }
+
+        function handleActiveWindows() { 
+            const cmd = "irm https://get.activated.win | iex";
+            copy(cmd);
+            const body = document.getElementById('term-body');
+            document.getElementById('term-title').innerText = "ACTIVATION_PROCESS.sys";
+            body.innerHTML = `
+                <h2 style="color:var(--neon-pink)">HƯỚNG DẪN ACTIVE WINDOWS/OFFICE</h2>
+                <div style="border: 1px solid var(--neon-pink); padding: 20px; background: rgba(255,0,255,0.05); line-height: 1.6;">
+                    <p>1. Chuột phải vào nút <b style="color:var(--neon-blue)">Start</b> (hình vuông Windows).</p>
+                    <p>2. Chọn <b style="color:var(--neon-blue)">Terminal (Admin)</b> hoặc <b style="color:var(--neon-blue)">PowerShell (Admin)</b>.</p>
+                    <p>3. <b style="color:var(--neon-yellow)">Chuột phải</b> vào màn hình đen vừa hiện ra để dán lệnh đã copy.</p>
+                    <p>4. Nhấn <b style="color:var(--neon-blue)">Enter</b> và làm theo hướng dẫn trên màn hình đen.</p>
+                    <div class="cmd-line" style="margin-top:20px;" onclick="copy('${cmd}')">${cmd}</div>
+                </div>
+                <p style="color: #888; margin-top: 15px; font-size: 0.8rem;">* Đây là tool Microsoft Activation Scripts (MAS) mã nguồn mở an toàn nhất thế giới.</p>
+            `;
+            document.getElementById('terminal-overlay').style.display = 'flex';
+        }
+
+        function handleCheckHardware() {
+            copy("dxdiag");
+            const body = document.getElementById('term-body');
+            document.getElementById('term-title').innerText = "DXDIAG_GUIDE.com";
+            body.innerHTML = `
+                <h2 style="color:var(--neon-blue)">KIỂM TRA DXDIAG</h2>
+                <div style="border: 1px solid var(--neon-blue); padding: 20px; background: rgba(0,0,0,0.5);">
+                    <p>1. Nhấn <b>Windows + R</b> trên bàn phím.</p>
+                    <p>2. <b style="color:var(--neon-yellow)">Dán lệnh</b> vừa copy vào ô Open.</p>
+                    <p>3. Nhấn <b>Enter</b> và xem các tab System, Display.</p>
+                    <div class="cmd-line" style="margin-top:20px;" onclick="copy('dxdiag')">dxdiag</div>
+                </div>
+            `;
+            document.getElementById('terminal-overlay').style.display = 'flex';
+        }
+
+        function openDeepTest() {
+            const body = document.getElementById('term-body');
+            document.getElementById('term-title').innerText = "DEEP_HARDWARE_TEST_SUITE.sys";
+            body.innerHTML = `
+                <h2 style="color:var(--neon-pink); text-align:center;">HỆ THỐNG KIỂM TRA PHẦN CỨNG CHUYÊN SÂU</h2>
+                <div class="test-grid">
+                    <div class="test-item">
+                        <span class="test-title">1. TEST CPU</span>
+                        <div class="cmd-line" onclick="copy('wmic cpu get name, maxclockspeed, numberofcores')">Copy lệnh CPU</div>
+                        <ul class="software-list"><li>Prime95 / IntelBurnTest</li></ul>
+                    </div>
+                    <div class="test-item">
+                        <span class="test-title">2. TEST RAM</span>
+                        <div class="cmd-line" onclick="copy('mdsched.exe')">mdsched.exe (Restart)</div>
+                        <ul class="software-list"><li>MemTest86</li></ul>
+                    </div>
+                    <div class="test-item">
+                        <span class="test-title">3. TEST Ổ CỨNG</span>
+                        <div class="cmd-line" onclick="copy('wmic diskdrive get status')">Check Status</div>
+                        <ul class="software-list"><li>CrystalDiskInfo</li></ul>
+                    </div>
+                    <div class="test-item">
+                        <span class="test-title">4. TEST GPU</span>
+                        <ul class="software-list"><li>FurMark / Heaven</li></ul>
+                    </div>
+                </div>
+            `;
+            document.getElementById('terminal-overlay').style.display = 'flex';
+        }
+
+        function openAppDownloader() {
+            const body = document.getElementById('term-body');
+            document.getElementById('term-title').innerText = "SOFTWARE_DEPLOYMENT_CENTER.sys";
+            body.innerHTML = `
+                <h2 style="color:var(--neon-green); text-align:center;">KHO ỨNG DỤNG & DRIVER</h2>
+                <div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin-top:20px;">
+                    <a href="https://ninite.com/" target="_blank" class="tech-btn green" style="width: 300px;">
+                        <span>🚀</span>
+                        <strong>NINITE.COM</strong>
+                        <p style="font-size: 0.7rem; margin-top: 10px; color: #ccc;">Tải hàng loạt App cơ bản chỉ với 1 click.</p>
+                    </a>
+                    <a href="https://www.snappy-driver-installer.org/" target="_blank" class="tech-btn warning" style="width: 300px;">
+                        <span>⚙️</span>
+                        <strong>SNAPPY DRIVER</strong>
+                        <p style="font-size: 0.7rem; margin-top: 10px; color: #ccc;">Bộ cài Driver mạnh nhất cho mọi dòng máy.</p>
+                    </a>
+                </div>
+            `;
+            document.getElementById('terminal-overlay').style.display = 'flex';
+        }
+
+        function showInfo() {
+            const body = document.getElementById('term-body');
+            document.getElementById('term-title').innerText = "CORE_IDENT_DATA.bin";
+            body.innerHTML = `
+                <div style="text-align:center; padding: 20px;">
+                    <h2 style="color:var(--neon-blue)">IDENTITY: DUONG KHAI MINH</h2>
+                    <div style="border:1px solid var(--neon-pink); padding: 20px; display:inline-block; text-align:left; background:rgba(255,0,255,0.05)">
+                        <p><span style="color:var(--neon-blue)">ADMIN:</span> Dương Khải Minh</p>
+                        <p><span style="color:var(--neon-blue)">YOUTUBE:</span> CatWindows</p>
+                        <p><span style="color:var(--neon-blue)">ZALO:</span> 0941.779.849</p>
+                        <p><span style="color:var(--neon-blue)">STATUS:</span> <span style="color:var(--neon-pink)">THPT CHUYÊN NGUYỄN BỈNH KHIÊM</span></p>
+                    </div>
+                </div>
+            `;
+            document.getElementById('terminal-overlay').style.display = 'flex';
+        }
+
+        function closeTerminal() { document.getElementById('terminal-overlay').style.display = 'none'; }
+    </script>
+</body>
+</html>
